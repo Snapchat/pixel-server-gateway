@@ -1,7 +1,7 @@
 # SC Gateway
 
 ## Deploy it on Google Cloud Run
-[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.sc-corp.net/Snapchat/pixel-server-gateway)
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.com/Snapchat/pixel-server-gateway/tree/gvarsanyi/pad-prep)
 
 ## Updated front-end code:
 
