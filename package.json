@@ -1,0 +1,24 @@
+{
+  "name": "pixel-server-gateway",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npm i && tsc && npm run compile-readme && npm run docs",
+    "compile-readme": "markdown README.md -t \"SCE Gateway\" -f gfm > static/readme.html",
+    "docs": "typedoc --out docs src/server.ts",
+    "start": "node bin/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^17.0.23",
+    "markdown-to-html": "^0.0.13",
+    "ts-node": "^10.7.0",
+    "typedoc": "^0.22.15",
+    "typescript": "^4.6.3"
+  }
+}
