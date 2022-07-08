@@ -25,3 +25,7 @@ To connect your front-end to this server please include the following front-end 
 </script>
 <!-- End Snap Pixel Code -->
 ```
+
+## Confirming Events
+
+Once you have done that please visit your webpage and confirm that the events are flowing through Events Manager
