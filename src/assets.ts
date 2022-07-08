@@ -1,6 +1,7 @@
 import { promises } from 'fs';
 import http2 from 'http2';
 import { config } from './config';
+import { log, logError } from './helpers/log';
 
 /**
  * Retrieve and store various assets.
@@ -22,14 +23,15 @@ class Assets {
    */
   async js(): Promise<string> {
     if (!this.cache.js) {
-      const protocol = config.js.split('://')[0];
-      console.log('[asset] loading JS source:', config.js);
-      if (protocol === 'http' || protocol === 'https') {
+      const src = config.debug && config.debugJs || config.js;
+      const protocol = src.split('://')[0];
+      log('[asset] loading JS source:', src);
+      if (!config.debug || protocol === 'http' || protocol === 'https') {
         this.cache.js = await this.loadJSRemote();
       } else {
-        this.cache.js = await promises.readFile(config.js, 'utf8');
+        this.cache.js = await promises.readFile(src, 'utf8');
       }
-      console.log(`[asset] js cached ${Buffer.byteLength(this.cache.js, 'utf8')} bytes`);
+      log(`[asset] js cached ${Buffer.byteLength(this.cache.js, 'utf8')} bytes`);
     }
     return this.cache.js;
   }
@@ -39,7 +41,7 @@ class Assets {
    */
    async rootDoc(): Promise<string> {
     if (!this.cache.rootDoc) {
-      console.log('[asset] loading readme file:', config.rootDoc);
+      log('[asset] loading readme file:', config.rootDoc);
       this.cache.rootDoc = await promises.readFile(config.rootDoc, 'utf8');
     }
     return this.cache.rootDoc;
@@ -79,7 +81,7 @@ class Assets {
   private loadJSRemoteTimer(): void {
     const hours = +config.jsRefreshHours > 0 ? +config.jsRefreshHours : 12;
 
-    console.log(`[asset] will fetch again in ${hours} hour${hours === 1 ? '' : 's'}`);
+    log(`[asset] will fetch again in ${hours} hour${hours === 1 ? '' : 's'}`);
     if (this.remotePollTimer) {
       clearTimeout(this.remotePollTimer);
     }
@@ -87,7 +89,7 @@ class Assets {
       try {
         this.loadJSRemote();
       } catch (err) {
-        console.error(err);
+        logError(err);
       }
     }, hours * 3600000);
   }

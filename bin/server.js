@@ -16,6 +16,7 @@ exports.Server = void 0;
 const http_1 = __importDefault(require("http"));
 const assets_1 = require("./assets");
 const config_1 = require("./config");
+const log_1 = require("./helpers/log");
 const cors_1 = require("./routes/cors");
 const js_asset_1 = require("./routes/js-asset");
 const not_found_1 = require("./routes/not-found");
@@ -41,10 +42,10 @@ class Server {
             yield assets_1.assets.rootDoc();
             this.server = http_1.default.createServer((req, res) => this.incoming(req, res));
             this.server.listen(config_1.config.serverPort, config_1.config.serverHost, () => {
-                console.log(`[server] listening on ${config_1.config.serverHost}:${config_1.config.serverPort}`);
+                (0, log_1.log)(`[server] listening on ${config_1.config.serverHost}:${config_1.config.serverPort}`);
             });
             this.server.on('error', (err) => {
-                console.error(`[server] ERROR`, err);
+                (0, log_1.logError)(`[server]`, err);
             });
         });
     }

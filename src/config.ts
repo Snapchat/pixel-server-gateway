@@ -6,8 +6,11 @@ export const config = {
   /**
    * Debug mode. Will trigger output some extra logs, 
    */
-  debug: true,
+  debug: false,
 
+  /**
+   * Load JS from alternative source (local relative path allowed)
+   */
   debugJs: 'static/scevent.min.js',
 
   /**
@@ -18,7 +21,7 @@ export const config = {
   /**
    * Poll cycle for updating scevent.min.js
    */
-  jsRefreshHours: 12,
+  jsRefreshHours: 1,
 
   /**
    * Event relay target. Default: 'https://tr.snapchat.com/gateway/p'

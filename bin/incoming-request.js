@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IncomingRequest = void 0;
+const log_1 = require("./helpers/log");
 /**
  * Incoming request base class. Handles basic request/response duties and other common functionality
  */
@@ -13,7 +14,7 @@ class IncomingRequest {
     constructor(req, res) {
         this.req = req;
         this.res = res;
-        console.log('req', req.method, req.url);
+        (0, log_1.debug)('req', req.method, req.url);
     }
     /**
      * Request IPv4 address

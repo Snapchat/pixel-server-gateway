@@ -6,14 +6,21 @@ exports.config = void 0;
  */
 exports.config = {
     /**
+     * Debug mode. Will trigger output some extra logs,
+     */
+    debug: false,
+    /**
+     * Load JS from alternative source (local relative path allowed)
+     */
+    debugJs: 'static/scevent.min.js',
+    /**
      * Source of scevent.min.js. Default: 'https://sc-static.net/scevent.min.js'. You may use local file (relative path) for testing
      */
-    // js: 'https://sc-static.net/scevent.min.js',
-    js: 'static/scevent.min.js',
+    js: 'https://sc-static.net/scevent.min.js',
     /**
      * Poll cycle for updating scevent.min.js
      */
-    jsRefreshHours: 12,
+    jsRefreshHours: 1,
     /**
      * Event relay target. Default: 'https://tr.snapchat.com/gateway/p'
      */

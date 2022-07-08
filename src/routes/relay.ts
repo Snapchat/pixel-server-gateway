@@ -3,6 +3,7 @@ import http from 'http';
 import https from 'https';
 import { IncomingRequest } from '../incoming-request';
 import { config } from '../config';
+import { debug, logError } from '../helpers/log';
 
 /**
  * Schema for incoming request
@@ -68,10 +69,10 @@ export class RelayRequest extends IncomingRequest {
     const protocol = RelayRequest.url.protocol;
     const hostname = RelayRequest.url.hostname;
     const port = RelayRequest.url.port || (protocol === 'https:' ? 443 : 80);
-    console.log(`[relay] ${method} ${protocol}//${hostname}:${port}${path}`);
+    debug(`[relay] ${method} ${protocol}//${hostname}:${port}${path}`);
     this.relayReq = (protocol === 'https:' ? https : http).request({ hostname, port, path, method }, (res) => this.relayResponse(res));
     this.relayReq.on('error', (err) => {
-      console.error('[relay] error:', err);
+      logError('[relay] error:', err);
       this.respond(500, { 'Content-Type': 'application/json' }, '{"error": "Server error"}');
     });
     if (relayBody) {
@@ -84,7 +85,7 @@ export class RelayRequest extends IncomingRequest {
           ipv4: ipv4 ? this.hash(ipv4) : undefined,
           ipv6: ipv6 ? this.hash(ipv6) : undefined
         };
-        console.log('[relay msg]', msg);
+        debug('[relay msg]', msg);
         relayBody = JSON.stringify(msg);
       }
       this.relayReq.write(relayBody);
@@ -97,17 +98,17 @@ export class RelayRequest extends IncomingRequest {
    * @param res response to outgoing request
    */
   protected relayResponse(res: http.IncomingMessage): void {
-    console.log(`[relay response] ${res.statusCode}`);
+    debug(`[relay response] ${res.statusCode}`);
     let data = '';
     res.on('data', d => {
       data += String(d);
     });
     res.on('error', (e) => {
-      console.log('[relay response] ERROR:', e);
+      logError('[relay response]', e);
       this.respond(500, { 'Content-Type': 'application/json' }, '{"error": "Server error"}');
     });
     res.on('end', () => {
-      console.log(`[relay response] ${res.statusCode} body: ${data}`);
+      debug(`[relay response] ${res.statusCode} body: ${data}`);
       this.respond(200, {
         'Content-Type': 'application/json',
         ...this.accessOriginHeader

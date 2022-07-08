@@ -2,6 +2,7 @@ import http from 'http';
 
 import { assets } from './assets';
 import { config } from './config';
+import { log, logError } from './helpers/log';
 import { CORSRequest } from './routes/cors';
 import { JSAssetRequest } from './routes/js-asset';
 import { NotFound } from './routes/not-found';
@@ -33,10 +34,10 @@ export class Server {
     await assets.rootDoc();
     this.server = http.createServer((req, res) => this.incoming(req, res));
     this.server.listen(config.serverPort, config.serverHost, () => {
-      console.log(`[server] listening on ${config.serverHost}:${config.serverPort}`);
+      log(`[server] listening on ${config.serverHost}:${config.serverPort}`);
     });
     this.server.on('error', (err) => {
-      console.error(`[server] ERROR`, err);
+      logError(`[server]`, err);
     });
   }
 

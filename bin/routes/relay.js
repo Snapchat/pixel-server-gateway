@@ -9,6 +9,7 @@ const http_1 = __importDefault(require("http"));
 const https_1 = __importDefault(require("https"));
 const incoming_request_1 = require("../incoming-request");
 const config_1 = require("../config");
+const log_1 = require("../helpers/log");
 /**
  * Event to be relayed to Snapchat server
  */
@@ -44,10 +45,10 @@ class RelayRequest extends incoming_request_1.IncomingRequest {
         const protocol = RelayRequest.url.protocol;
         const hostname = RelayRequest.url.hostname;
         const port = RelayRequest.url.port || (protocol === 'https:' ? 443 : 80);
-        console.log(`[relay] ${method} ${protocol}//${hostname}:${port}${path}`);
+        (0, log_1.debug)(`[relay] ${method} ${protocol}//${hostname}:${port}${path}`);
         this.relayReq = (protocol === 'https:' ? https_1.default : http_1.default).request({ hostname, port, path, method }, (res) => this.relayResponse(res));
         this.relayReq.on('error', (err) => {
-            console.error('[relay] error:', err);
+            (0, log_1.logError)('[relay] error:', err);
             this.respond(500, { 'Content-Type': 'application/json' }, '{"error": "Server error"}');
         });
         if (relayBody) {
@@ -55,7 +56,7 @@ class RelayRequest extends incoming_request_1.IncomingRequest {
                 const ipv4 = this.ipv4;
                 const ipv6 = this.ipv6;
                 const msg = Object.assign(Object.assign({}, relayBody), { headers: this.req.headers, ipv4: ipv4 ? this.hash(ipv4) : undefined, ipv6: ipv6 ? this.hash(ipv6) : undefined });
-                console.log('[relay msg]', msg);
+                (0, log_1.debug)('[relay msg]', msg);
                 relayBody = JSON.stringify(msg);
             }
             this.relayReq.write(relayBody);
@@ -68,17 +69,17 @@ class RelayRequest extends incoming_request_1.IncomingRequest {
      * @param res response to outgoing request
      */
     relayResponse(res) {
-        console.log(`[relay response] ${res.statusCode}`);
+        (0, log_1.debug)(`[relay response] ${res.statusCode}`);
         let data = '';
         res.on('data', d => {
             data += String(d);
         });
         res.on('error', (e) => {
-            console.log('[relay response] ERROR:', e);
+            (0, log_1.logError)('[relay response]', e);
             this.respond(500, { 'Content-Type': 'application/json' }, '{"error": "Server error"}');
         });
         res.on('end', () => {
-            console.log(`[relay response] ${res.statusCode} body: ${data}`);
+            (0, log_1.debug)(`[relay response] ${res.statusCode} body: ${data}`);
             this.respond(200, Object.assign({ 'Content-Type': 'application/json' }, this.accessOriginHeader), data);
         });
     }
@@ -89,7 +90,7 @@ class RelayRequest extends incoming_request_1.IncomingRequest {
      */
     hash(value) {
         const sha256 = (0, crypto_1.createHash)('sha256');
-        const hash = sha256.update(value).digest('base64');
+        const hash = sha256.update(value).digest('hex');
         return hash;
     }
 }

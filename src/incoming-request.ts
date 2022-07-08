@@ -1,4 +1,5 @@
 import http from 'http';
+import { debug } from './helpers/log';
 
 /**
  * Incoming request base class. Handles basic request/response duties and other common functionality
@@ -26,7 +27,7 @@ export abstract class IncomingRequest {
    * @param res server response object
    */
   constructor(protected readonly req: http.IncomingMessage, protected readonly res: http.ServerResponse) {
-    console.log('req', req.method, req.url);
+    debug('req', req.method, req.url);
   }
 
   /**
