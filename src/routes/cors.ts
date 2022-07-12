@@ -18,12 +18,12 @@ export class CORSRequest extends IncomingRequest {
     }
     const allowedHeaders = req.headers['access-control-request-headers'];
     const headers: http.OutgoingHttpHeaders = {
-      'Access-Control-Allow-Methods': 'POST',
+      'Access-Control-Allow-Methods': IncomingRequest.acceptedMethods.join(', '),
       ...this.accessOriginHeader
     };
     if (allowedHeaders) {
       headers['Access-Control-Allow-Headers'] = allowedHeaders;
     }
-    this.respond(206, headers, '{"error": "Not Found"}');
+    this.respond(206, headers, '');
   }
 }

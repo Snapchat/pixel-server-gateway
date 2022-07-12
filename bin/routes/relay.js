@@ -7,8 +7,10 @@ exports.RelayRequest = void 0;
 const crypto_1 = require("crypto");
 const http_1 = __importDefault(require("http"));
 const https_1 = __importDefault(require("https"));
+const url_1 = require("url");
 const incoming_request_1 = require("../incoming-request");
 const config_1 = require("../config");
+const log_1 = require("../helpers/log");
 /**
  * Event to be relayed to Snapchat server
  */
@@ -18,21 +20,61 @@ class RelayRequest extends incoming_request_1.IncomingRequest {
      * @param req incoming message object
      * @param res server response object
      * @param rawBody incoming request body
+     * @param url parsed URL
+     * @param attachRelayInfo triggers adding original context to the relayed request
      */
-    constructor(req, res, rawBody) {
+    constructor(req, res, rawBody, url, attachRelayInfo = false) {
         super(req, res);
         this.rawBody = rawBody;
+        this.url = url;
+        this.attachRelayInfo = attachRelayInfo;
+        /**
+         * Whether the incoming request's content type is JSON
+         */
+        this.isJSON = false;
         let jsonBody = {};
         try {
             jsonBody = JSON.parse(rawBody);
+            this.isJSON = true;
         }
-        catch (e) {
-            this.respond(400, { 'Content-Type': 'application/json' }, '{"error": "Invalid request body"}');
-            return;
+        catch (e) { }
+        const pathname = this.meta(jsonBody, 'p', 'p', 'x-capi-path') || (attachRelayInfo ? config_1.config.pixelPath : config_1.config.v2conversionPath);
+        const method = this.meta(jsonBody, 'm', 'm', 'x-capi-method') || req.method;
+        const testStr = this.meta(jsonBody, 't', 't', 'x-capi-test-mode');
+        const testMode = !!(testStr && typeof testStr === 'string' && testStr.toLowerCase() !== 'false' && testStr.toLowerCase() !== 'f');
+        const body = (attachRelayInfo && this.isJSON && typeof jsonBody.b === 'object' && jsonBody.p && jsonBody.m ? jsonBody.b :
+            (attachRelayInfo && this.isJSON ? jsonBody : undefined));
+        if (method && pathname) {
+            this.relay(method, pathname, body, testMode);
         }
-        const pathname = (typeof jsonBody.p === 'string' && jsonBody.p ? jsonBody.p : RelayRequest.url.pathname);
-        const method = (typeof jsonBody.m === 'string' && jsonBody.m ? jsonBody.m : 'POST');
-        this.relay(method, pathname, jsonBody.b);
+        else if (this.isJSON) {
+            this.respond(400, { 'Content-Type': 'application/json' }, '{"status":"ERROR","reason":"Invalid request"}');
+        }
+        else {
+            this.respond(400, { 'Content-Type': 'text/plain' }, 'Invalid request');
+        }
+    }
+    /**
+     * Get metadata from optional JSON body, optional URL info, or headers (in this order of precedence). Used for targeting path, HTTP method, test target
+     * @param jsonBody optional JSON schema
+     * @param jsonKey key for JSON schema
+     * @param urlKey query string parameter key
+     * @param headerKey header key
+     * @returns metadata
+     */
+    meta(jsonBody, jsonKey, urlKey, headerKey) {
+        const jsonValue = jsonBody[jsonKey];
+        if (jsonValue && (typeof jsonValue === 'string' || typeof jsonValue === 'boolean')) {
+            return String(jsonValue);
+        }
+        const urlValue = this.url.searchParams.get(urlKey);
+        if (urlValue) {
+            return urlValue;
+        }
+        const headerValue = this.req.headers[headerKey];
+        if (headerValue) {
+            return Array.isArray(headerValue) ? headerValue[0] : headerValue;
+        }
     }
     /**
      * Relay processed incoming request to server
@@ -40,25 +82,30 @@ class RelayRequest extends incoming_request_1.IncomingRequest {
      * @param path HTTP path for the outgoing request
      * @param relayBody HTTP request body for the outgoing request
      */
-    relay(method, path, relayBody) {
-        const protocol = RelayRequest.url.protocol;
-        const hostname = RelayRequest.url.hostname;
-        const port = RelayRequest.url.port || (protocol === 'https:' ? 443 : 80);
-        console.log(`[relay] ${method} ${protocol}//${hostname}:${port}${path}`);
+    relay(method, path, relayBody, testMode) {
+        const url = new url_1.URL((testMode ? config_1.config.pixelServerTestHost : config_1.config.pixelServerHost) + path);
+        const protocol = url.protocol;
+        const hostname = url.hostname;
+        const port = url.port || (protocol === 'https:' ? 443 : 80);
+        (0, log_1.debug)(`[relay] ${method} ${protocol}//${hostname}:${port}${path}`);
         this.relayReq = (protocol === 'https:' ? https_1.default : http_1.default).request({ hostname, port, path, method }, (res) => this.relayResponse(res));
         this.relayReq.on('error', (err) => {
-            console.error('[relay] error:', err);
+            (0, log_1.logError)('[relay] error:', err);
             this.respond(500, { 'Content-Type': 'application/json' }, '{"error": "Server error"}');
         });
-        if (relayBody) {
-            if (typeof relayBody !== 'string') {
-                const ipv4 = this.ipv4;
-                const ipv6 = this.ipv6;
-                const msg = Object.assign(Object.assign({}, relayBody), { headers: this.req.headers, ipv4: ipv4 ? this.hash(ipv4) : undefined, ipv6: ipv6 ? this.hash(ipv6) : undefined });
-                console.log('[relay msg]', msg);
-                relayBody = JSON.stringify(msg);
-            }
-            this.relayReq.write(relayBody);
+        if (this.req.headers['authorization']) {
+            this.relayReq.setHeader('Authorization', this.req.headers['authorization']);
+        }
+        if (relayBody && typeof relayBody === 'object') {
+            const ipv4 = this.ipv4;
+            const ipv6 = this.ipv6;
+            const msg = Object.assign(Object.assign({}, relayBody), { headers: this.req.headers, ipv4: ipv4 ? this.hash(ipv4) : undefined, ipv6: ipv6 ? this.hash(ipv6) : undefined });
+            (0, log_1.debug)('[relay msg]', msg);
+            this.relayReq.write(JSON.stringify(msg));
+        }
+        else if (this.rawBody) {
+            (0, log_1.debug)('[relay msg]', this.rawBody);
+            this.relayReq.write(this.rawBody);
         }
         this.relayReq.end();
     }
@@ -68,17 +115,17 @@ class RelayRequest extends incoming_request_1.IncomingRequest {
      * @param res response to outgoing request
      */
     relayResponse(res) {
-        console.log(`[relay response] ${res.statusCode}`);
+        (0, log_1.debug)(`[relay response] ${res.statusCode}`);
         let data = '';
         res.on('data', d => {
             data += String(d);
         });
         res.on('error', (e) => {
-            console.log('[relay response] ERROR:', e);
+            (0, log_1.logError)('[relay response]', e);
             this.respond(500, { 'Content-Type': 'application/json' }, '{"error": "Server error"}');
         });
         res.on('end', () => {
-            console.log(`[relay response] ${res.statusCode} body: ${data}`);
+            (0, log_1.debug)(`[relay response] ${res.statusCode} body: ${data}`);
             this.respond(200, Object.assign({ 'Content-Type': 'application/json' }, this.accessOriginHeader), data);
         });
     }
@@ -89,12 +136,8 @@ class RelayRequest extends incoming_request_1.IncomingRequest {
      */
     hash(value) {
         const sha256 = (0, crypto_1.createHash)('sha256');
-        const hash = sha256.update(value).digest('base64');
+        const hash = sha256.update(value).digest('hex');
         return hash;
     }
 }
 exports.RelayRequest = RelayRequest;
-/**
- * Node.js URL object from config.pixelUrl string
- */
-RelayRequest.url = new URL(config_1.config.pixelUrl);

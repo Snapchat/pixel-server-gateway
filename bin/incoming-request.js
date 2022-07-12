@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IncomingRequest = void 0;
+const log_1 = require("./helpers/log");
 /**
  * Incoming request base class. Handles basic request/response duties and other common functionality
  */
@@ -13,7 +14,7 @@ class IncomingRequest {
     constructor(req, res) {
         this.req = req;
         this.res = res;
-        console.log('req', req.method, req.url);
+        (0, log_1.debug)('req', req.method, req.url);
     }
     /**
      * Request IPv4 address
@@ -40,6 +41,9 @@ class IncomingRequest {
      * @param body HTTP resonse body
      */
     respond(statusCode, headers, body) {
+        if (statusCode >= 400) {
+            (0, log_1.logError)('[server] request error:', statusCode, 'for', this.req.method, this.req.url);
+        }
         this.res.writeHead(statusCode, headers);
         if (!body) {
             this.res.end();
@@ -85,6 +89,10 @@ class IncomingRequest {
     }
 }
 exports.IncomingRequest = IncomingRequest;
+/**
+ * HTTP methods accepted for requests
+ */
+IncomingRequest.acceptedMethods = ['GET', 'DELETE', 'PATCH', 'POST', 'PUT'];
 /**
  * RegEx to identify host string (to be replaced with the requested host)
  * TODO: remove temporary variants as they go away after testing
