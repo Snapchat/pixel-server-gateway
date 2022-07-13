@@ -1,10 +1,7 @@
 # SC Gateway
 
 ## Deploy it on Google Cloud Run
-[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.com/Snapchat/pixel-server-gateway.git)
-
-## Deploy it on AWS Cloudformation
-[![](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?#/stacks/create/template?stackName=snap-pixel-gateway&templateURL=https://snap-pixel-server-gateway.s3.us-west-1.amazonaws.com/cloudformation.yaml)
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.sc-corp.net/Snapchat/pixel-server-gateway)
 
 ## Updated front-end code:
 

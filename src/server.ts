@@ -2,6 +2,9 @@ import http from 'http';
 
 import { assets } from './assets';
 import { config } from './config';
+import { log, logError } from './helpers/log';
+import { partialURL } from './helpers/partial-url';
+import { IncomingRequest } from './incoming-request';
 import { CORSRequest } from './routes/cors';
 import { JSAssetRequest } from './routes/js-asset';
 import { NotFound } from './routes/not-found';
@@ -33,10 +36,10 @@ export class Server {
     await assets.rootDoc();
     this.server = http.createServer((req, res) => this.incoming(req, res));
     this.server.listen(config.serverPort, config.serverHost, () => {
-      console.log(`[server] listening on ${config.serverHost}:${config.serverPort}`);
+      log(`[server] listening on ${config.serverHost}:${config.serverPort}`);
     });
     this.server.on('error', (err) => {
-      console.error(`[server] ERROR`, err);
+      logError(`[server]`, err);
     });
   }
 
@@ -63,23 +66,27 @@ export class Server {
    * @param body request body
    */
   private route(req: http.IncomingMessage, res: http.ServerResponse, body: string = ''): void {
-    const urlParts = String(req.url).split('/');
-    if (req.method === 'GET' && req.url === '/') {
-      new RootDocRequest(req, res);
-      return;
-    }
-    const part1 = (urlParts[1] || '').split('?')[0];
-    if (req.method === 'GET' && (part1 === 'scevent.min.js' || part1 === 's.js') && urlParts.length === 2) {
-      new JSAssetRequest(req, res);
-      return;
-    }
-    if (req.method === 'OPTIONS' && part1 === 'r' && urlParts.length === 2) {
-      new CORSRequest(req, res);
-      return;
-    }
-    if (req.method === 'POST' && part1 === 'r' && urlParts.length === 2) {
-      new RelayRequest(req, res, body);
-      return;
+    let url = partialURL(req.url);
+    if (url) {
+      if (req.method === 'GET' && url.pathname === '/') {
+        new RootDocRequest(req, res);
+        return;
+      }
+      if (req.method === 'GET' && (url.pathname === '/scevent.min.js' || url.pathname === '/s.js')) {
+        new JSAssetRequest(req, res);
+        return;
+      }
+      if (url.pathname === '/r' || url.pathname === '/conversion' || url.pathname === '/v2/conversion') {
+        const attachRelayInfo = (url.pathname === '/r');
+        if (req.method === 'OPTIONS') {
+          new CORSRequest(req, res);
+          return;
+        }
+        if (IncomingRequest.acceptedMethods.includes(req.method || '')) {
+          new RelayRequest(req, res, body, url, attachRelayInfo);
+          return;
+        }
+      }
     }
     new NotFound(req, res);
   }

@@ -18,11 +18,11 @@ class CORSRequest extends incoming_request_1.IncomingRequest {
             return;
         }
         const allowedHeaders = req.headers['access-control-request-headers'];
-        const headers = Object.assign({ 'Access-Control-Allow-Methods': 'POST' }, this.accessOriginHeader);
+        const headers = Object.assign({ 'Access-Control-Allow-Methods': incoming_request_1.IncomingRequest.acceptedMethods.join(', ') }, this.accessOriginHeader);
         if (allowedHeaders) {
             headers['Access-Control-Allow-Headers'] = allowedHeaders;
         }
-        this.respond(206, headers, '{"error": "Not Found"}');
+        this.respond(206, headers, '');
     }
 }
 exports.CORSRequest = CORSRequest;

@@ -16,6 +16,9 @@ exports.Server = void 0;
 const http_1 = __importDefault(require("http"));
 const assets_1 = require("./assets");
 const config_1 = require("./config");
+const log_1 = require("./helpers/log");
+const partial_url_1 = require("./helpers/partial-url");
+const incoming_request_1 = require("./incoming-request");
 const cors_1 = require("./routes/cors");
 const js_asset_1 = require("./routes/js-asset");
 const not_found_1 = require("./routes/not-found");
@@ -41,10 +44,10 @@ class Server {
             yield assets_1.assets.rootDoc();
             this.server = http_1.default.createServer((req, res) => this.incoming(req, res));
             this.server.listen(config_1.config.serverPort, config_1.config.serverHost, () => {
-                console.log(`[server] listening on ${config_1.config.serverHost}:${config_1.config.serverPort}`);
+                (0, log_1.log)(`[server] listening on ${config_1.config.serverHost}:${config_1.config.serverPort}`);
             });
             this.server.on('error', (err) => {
-                console.error(`[server] ERROR`, err);
+                (0, log_1.logError)(`[server]`, err);
             });
         });
     }
@@ -70,23 +73,27 @@ class Server {
      * @param body request body
      */
     route(req, res, body = '') {
-        const urlParts = String(req.url).split('/');
-        if (req.method === 'GET' && req.url === '/') {
-            new root_doc_1.RootDocRequest(req, res);
-            return;
-        }
-        const part1 = (urlParts[1] || '').split('?')[0];
-        if (req.method === 'GET' && (part1 === 'scevent.min.js' || part1 === 's.js') && urlParts.length === 2) {
-            new js_asset_1.JSAssetRequest(req, res);
-            return;
-        }
-        if (req.method === 'OPTIONS' && part1 === 'r' && urlParts.length === 2) {
-            new cors_1.CORSRequest(req, res);
-            return;
-        }
-        if (req.method === 'POST' && part1 === 'r' && urlParts.length === 2) {
-            new relay_1.RelayRequest(req, res, body);
-            return;
+        let url = (0, partial_url_1.partialURL)(req.url);
+        if (url) {
+            if (req.method === 'GET' && url.pathname === '/') {
+                new root_doc_1.RootDocRequest(req, res);
+                return;
+            }
+            if (req.method === 'GET' && (url.pathname === '/scevent.min.js' || url.pathname === '/s.js')) {
+                new js_asset_1.JSAssetRequest(req, res);
+                return;
+            }
+            if (url.pathname === '/r' || url.pathname === '/conversion' || url.pathname === '/v2/conversion') {
+                const attachRelayInfo = (url.pathname === '/r');
+                if (req.method === 'OPTIONS') {
+                    new cors_1.CORSRequest(req, res);
+                    return;
+                }
+                if (incoming_request_1.IncomingRequest.acceptedMethods.includes(req.method || '')) {
+                    new relay_1.RelayRequest(req, res, body, url, attachRelayInfo);
+                    return;
+                }
+            }
         }
         new not_found_1.NotFound(req, res);
     }

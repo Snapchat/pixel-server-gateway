@@ -16,6 +16,7 @@ exports.assets = void 0;
 const fs_1 = require("fs");
 const http2_1 = __importDefault(require("http2"));
 const config_1 = require("./config");
+const log_1 = require("./helpers/log");
 /**
  * Retrieve and store various assets.
  * Loads are asynchronous
@@ -33,15 +34,16 @@ class Assets {
     js() {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.cache.js) {
-                const protocol = config_1.config.js.split('://')[0];
-                console.log('[asset] loading JS source:', config_1.config.js);
-                if (protocol === 'http' || protocol === 'https') {
+                const src = config_1.config.debug && config_1.config.debugJs || config_1.config.js;
+                const protocol = src.split('://')[0];
+                (0, log_1.log)('[asset] loading JS source:', src);
+                if (!config_1.config.debug || protocol === 'http' || protocol === 'https') {
                     this.cache.js = yield this.loadJSRemote();
                 }
                 else {
-                    this.cache.js = yield fs_1.promises.readFile(config_1.config.js, 'utf8');
+                    this.cache.js = yield fs_1.promises.readFile(src, 'utf8');
                 }
-                console.log(`[asset] js cached ${Buffer.byteLength(this.cache.js, 'utf8')} bytes`);
+                (0, log_1.log)(`[asset] js cached ${Buffer.byteLength(this.cache.js, 'utf8')} bytes`);
             }
             return this.cache.js;
         });
@@ -52,7 +54,7 @@ class Assets {
     rootDoc() {
         return __awaiter(this, void 0, void 0, function* () {
             if (!this.cache.rootDoc) {
-                console.log('[asset] loading readme file:', config_1.config.rootDoc);
+                (0, log_1.log)('[asset] loading readme file:', config_1.config.rootDoc);
                 this.cache.rootDoc = yield fs_1.promises.readFile(config_1.config.rootDoc, 'utf8');
             }
             return this.cache.rootDoc;
@@ -92,7 +94,7 @@ class Assets {
      */
     loadJSRemoteTimer() {
         const hours = +config_1.config.jsRefreshHours > 0 ? +config_1.config.jsRefreshHours : 12;
-        console.log(`[asset] will fetch again in ${hours} hour${hours === 1 ? '' : 's'}`);
+        (0, log_1.log)(`[asset] will fetch again in ${hours} hour${hours === 1 ? '' : 's'}`);
         if (this.remotePollTimer) {
             clearTimeout(this.remotePollTimer);
         }
@@ -101,7 +103,7 @@ class Assets {
                 this.loadJSRemote();
             }
             catch (err) {
-                console.error(err);
+                (0, log_1.logError)(err);
             }
         }, hours * 3600000);
     }

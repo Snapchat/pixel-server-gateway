@@ -1,9 +1,15 @@
 import http from 'http';
+import { debug, logError } from './helpers/log';
 
 /**
  * Incoming request base class. Handles basic request/response duties and other common functionality
  */
 export abstract class IncomingRequest {
+  /**
+   * HTTP methods accepted for requests
+   */
+  public static readonly acceptedMethods = ['GET', 'DELETE', 'PATCH', 'POST', 'PUT'];
+
   /**
    * RegEx to identify host string (to be replaced with the requested host)
    * TODO: remove temporary variants as they go away after testing
@@ -26,7 +32,7 @@ export abstract class IncomingRequest {
    * @param res server response object
    */
   constructor(protected readonly req: http.IncomingMessage, protected readonly res: http.ServerResponse) {
-    console.log('req', req.method, req.url);
+    debug('req', req.method, req.url);
   }
 
   /**
@@ -57,6 +63,9 @@ export abstract class IncomingRequest {
    * @param body HTTP resonse body
    */
   respond(statusCode: number, headers: http.OutgoingHttpHeaders | http.OutgoingHttpHeader[] | undefined, body?: string): void {
+    if (statusCode >= 400) {
+      logError('[server] request error:', statusCode, 'for', this.req.method, this.req.url);
+    }
     this.res.writeHead(statusCode, headers);
     if (!body) {
       this.res.end();
