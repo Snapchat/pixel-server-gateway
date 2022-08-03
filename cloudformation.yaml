@@ -142,7 +142,7 @@ Resources:
             Options:
               awslogs-create-group: 'true'
               awslogs-group: /ecs/pixel-gateway
-              awslogs-region: us-west-1
+              awslogs-region: !Ref 'AWS::Region'
               awslogs-stream-prefix: ecs
             LogDriver: awslogs
           Name: gateway
