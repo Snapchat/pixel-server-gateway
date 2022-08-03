@@ -179,8 +179,7 @@ Resources:
         - FARGATE_SPOT
   ECSService:
     Type: AWS::ECS::Service
-    DependsOn: 
-      - ListenerHTTP
+    DependsOn: ListenerHTTP
     Properties:
       Cluster: !Ref ECSCluster
       TaskDefinition: !Ref ECSTaskDefinition
