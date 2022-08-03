@@ -75,6 +75,14 @@ Resources:
             Principal:
               Service: ecs-tasks.amazonaws.com
             Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: log-group
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                Resource: '*'
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
   ECSTaskRole:
@@ -142,7 +150,7 @@ Resources:
             Options:
               awslogs-create-group: 'true'
               awslogs-group: /ecs/pixel-gateway
-              awslogs-region: us-west-1
+              awslogs-region: !Ref 'AWS::Region'
               awslogs-stream-prefix: ecs
             LogDriver: awslogs
           Name: gateway
