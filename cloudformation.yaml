@@ -128,7 +128,7 @@ Resources:
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
-      HealthCheckPath: /h
+      HealthCheckPath: /
       Port: 8080
       Protocol: HTTP
       TargetType: ip
@@ -251,4 +251,7 @@ Outputs:
     Value: !GetAtt ECSService.Name
   LoadBalancerDNS:
     Description: DNS name from load balancer.
-    Value: !GetAtt LoadBalancer.DNSName
+    Value: !Join
+      - ':'
+      - - !GetAtt LoadBalancer.DNSName
+        - 8080
