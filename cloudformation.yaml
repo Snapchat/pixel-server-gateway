@@ -3,6 +3,9 @@ Parameters:
   DockerImage:
     Type: String
     Default: jkrup/snap-pixel-server-gateway:latest
+  DomainName:
+    Type: String
+    Description: Full domain name, like tr.snapchat.com
 Resources:
   EC2VPC:
     Type: AWS::EC2::VPC
@@ -10,20 +13,26 @@ Resources:
       CidrBlock: 172.31.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
-  EC2SecurityGroup:
+  ContainerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    Properties: 
-      GroupDescription: 'VPC Security Group Allow 8080'
-      SecurityGroupIngress: 
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIpv6: ::/0
+    Properties:
+      GroupDescription: 'Container Security Group'
       VpcId: !Ref EC2VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Load Balancer Security Group'
+      VpcId: !Ref EC2VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
   InternetGateway:
     Type: AWS::EC2::InternetGateway
   InternetGatewayAttachment:
@@ -124,7 +133,7 @@ Resources:
         - !Ref EC2PublicSubnet2
       Type: application
       SecurityGroups:
-        - !Ref EC2SecurityGroup
+        - !Ref LoadBalancerSecurityGroup
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -133,15 +142,22 @@ Resources:
       Protocol: HTTP
       TargetType: ip
       VpcId: !Ref EC2VPC
-  ListenerHTTP:
+  Certificate:
+    Type: "AWS::CertificateManager::Certificate"
+    Properties: 
+      DomainName: !Ref DomainName
+      ValidationMethod: DNS
+  ListenerHTTPS:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
       LoadBalancerArn: !Ref LoadBalancer
-      Port: 8080
-      Protocol: HTTP
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - !Ref Certificate
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -179,7 +195,7 @@ Resources:
         - FARGATE_SPOT
   ECSService:
     Type: AWS::ECS::Service
-    DependsOn: ListenerHTTP
+    DependsOn: ListenerHTTPS
     Properties:
       Cluster: !Ref ECSCluster
       TaskDefinition: !Ref ECSTaskDefinition
@@ -193,7 +209,7 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
           SecurityGroups: 
-            - !Ref EC2SecurityGroup
+            - !Ref ContainerSecurityGroup
           Subnets: 
             - !Ref EC2PublicSubnet1
             - !Ref EC2PublicSubnet2
@@ -250,8 +266,5 @@ Outputs:
     Description: The created service.
     Value: !GetAtt ECSService.Name
   LoadBalancerDNS:
-    Description: DNS name from load balancer.
-    Value: !Join
-      - ':'
-      - - !GetAtt LoadBalancer.DNSName
-        - 8080
+    Description: Created domain name.
+    Value: !GetAtt LoadBalancer.DNSName
